@@ -3,6 +3,7 @@ package com.marcedev.attendance.controller;
 import com.marcedev.attendance.entities.Course;
 import com.marcedev.attendance.entities.User;
 import com.marcedev.attendance.enums.Rol;
+import com.marcedev.attendance.mapper.CourseMapper;
 import com.marcedev.attendance.repository.CourseRepository;
 import com.marcedev.attendance.repository.UserRepository;
 import com.marcedev.attendance.service.CourseService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Arrays;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/courses")
@@ -27,6 +29,7 @@ public class CourseController {
     private final CourseRepository courseRepository;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final CourseMapper courseMapper;
 
     // ✅ Listar cursos según rol
     @GetMapping
@@ -34,14 +37,27 @@ public class CourseController {
         User currentUser = getAuthenticatedUser();
 
         return switch (currentUser.getRole()) {
-            case SUPER_ADMIN -> ResponseEntity.ok(courseRepository.findAll());
+            case SUPER_ADMIN -> ResponseEntity.ok(
+                    courseMapper.toDTOList(courseRepository.findAll())
+            );
+
             case ADMIN -> {
                 if (currentUser.getOrganization() == null)
                     yield ResponseEntity.badRequest().body("⚠️ No tiene organización asignada.");
 
-                yield ResponseEntity.ok(courseRepository.findByOrganizationId(currentUser.getOrganization().getId()));
+                yield ResponseEntity.ok(
+                        courseMapper.toDTOList(
+                                courseRepository.findByOrganizationId(currentUser.getOrganization().getId())
+                        )
+                );
             }
-            case INSTRUCTOR -> ResponseEntity.ok(courseRepository.findByInstructorId(currentUser.getId()));
+
+            case INSTRUCTOR -> ResponseEntity.ok(
+                    courseMapper.toDTOList(
+                            courseRepository.findByInstructorId(currentUser.getId())
+                    )
+            );
+
             default -> ResponseEntity.status(403).body("🚫 No tiene permisos para ver cursos.");
         };
     }
@@ -157,16 +173,18 @@ public class CourseController {
     public ResponseEntity<?> getMyCourses() {
         User currentUser = getAuthenticatedUser();
 
+        // Solo ADMIN o INSTRUCTOR pueden ver sus cursos
         if (currentUser.getRole() != Rol.ADMIN && currentUser.getRole() != Rol.INSTRUCTOR)
             return ResponseEntity.status(403).body("🚫 Solo ADMIN o INSTRUCTOR.");
 
-        return ResponseEntity.ok(
-                courseService.findAll().stream()
-                        .filter(course ->
-                                course.getInstructor() != null &&
-                                        course.getInstructor().getId().equals(currentUser.getId()))
-                        .toList()
-        );
+        // Filtrar cursos donde el instructor coincida con el usuario autenticado
+        var filteredCourses = courseService.findAll().stream()
+                .filter(course -> course.getInstructor() != null &&
+                        course.getInstructor().getId().equals(currentUser.getId()))
+                .toList();
+
+        // ✅ Convertir a DTO (esto hace que instructorName/instructorId lleguen completos al Frontend)
+        return ResponseEntity.ok(courseMapper.toDTOList(filteredCourses));
     }
 
     // ✅ Obtener usuario autenticado
@@ -184,7 +202,7 @@ public class CourseController {
             @PathVariable Long instructorId
     ) {
         courseService.assignInstructor(courseId, instructorId);
-        return ResponseEntity.ok("Instructor asignado");
+        return ResponseEntity.ok(Map.of("message", "Instructor asignado"));
     }
 
 }

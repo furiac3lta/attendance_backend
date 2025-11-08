@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"students", "organization", "instructor", "hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"students", "organization", "hibernateLazyInitializer", "handler"})
 public class Course {
 
 
@@ -36,7 +36,7 @@ public class Course {
     private String universityProgram;
 
     /** Instructor que creó el curso */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "instructor_id", nullable = false)
     @JsonIgnoreProperties({
             "courses", "organization", "password", "attendances"
