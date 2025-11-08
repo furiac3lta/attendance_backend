@@ -31,7 +31,7 @@ public class OrganizationController {
     public ResponseEntity<?> getAllOrganizations() {
         User currentUser = getAuthenticatedUser();
 
-        // SUPER_ADMIN ve todas
+        // 🟣 SUPER_ADMIN ve todas las organizaciones
         if (currentUser.getRole() == Rol.SUPER_ADMIN) {
             var dtos = organizationRepository.findAll().stream()
                     .map(org -> OrganizationDTO.builder()
@@ -41,13 +41,14 @@ public class OrganizationController {
                             .phone(org.getPhone())
                             .address(org.getAddress())
                             .logoUrl(org.getLogoUrl())
+                            .adminFullName(org.getAdmin() != null ? org.getAdmin().getFullName() : null) // ✅ AQUI
                             .build())
                     .toList();
 
             return ResponseEntity.ok(dtos);
         }
 
-        // ADMIN solo ve la suya
+        // 🔵 ADMIN ve solo su organización
         if (currentUser.getRole() == Rol.ADMIN) {
             if (currentUser.getOrganization() == null) {
                 return ResponseEntity.badRequest().body("⚠️ No tiene organización asignada");
@@ -61,12 +62,13 @@ public class OrganizationController {
                     .phone(org.getPhone())
                     .address(org.getAddress())
                     .logoUrl(org.getLogoUrl())
+                    .adminFullName(org.getAdmin() != null ? org.getAdmin().getFullName() : null) // ✅ AQUI
                     .build();
 
             return ResponseEntity.ok(List.of(dto));
         }
 
-        // INSTRUCTOR / USER no tienen acceso
+        // 🔴 INSTRUCTOR / USER no pueden ver organizaciones
         return ResponseEntity.status(403)
                 .body("🚫 No tiene permisos para ver organizaciones");
     }

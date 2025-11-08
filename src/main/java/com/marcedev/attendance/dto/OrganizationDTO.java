@@ -12,4 +12,6 @@ public class OrganizationDTO {
     private String phone;
     private String address;
     private String logoUrl;
+    private String adminFullName; // 👈 agregar este campo
+
 }
