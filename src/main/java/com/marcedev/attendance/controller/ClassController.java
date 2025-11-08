@@ -54,27 +54,40 @@ public class ClassController {
                 : ResponseEntity.ok(details);
     }
 
-    // ✅ Crear clase
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ClassCreateDTO dto) {
         try {
+            User currentUser = getAuthenticatedUser();
+
             if (!hasPermission(Rol.INSTRUCTOR, Rol.ADMIN, Rol.SUPER_ADMIN)) {
-                return ResponseEntity.status(403).body("🚫 No autorizado");
+                return ResponseEntity.status(403).body("🚫 No autorizado para crear clases.");
             }
 
             var course = courseRepository.findById(dto.getCourseId())
                     .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
 
+            LocalDate date = LocalDate.parse(dto.getDate());
+
             ClassSession newClass = new ClassSession();
             newClass.setName(dto.getName());
-            newClass.setDate(LocalDate.parse(dto.getDate())); // ✅ Conversión segura
+            newClass.setDate(date);
             newClass.setCourse(course);
+            newClass.setInstructor(currentUser); // ✅ NECESARIO
+            newClass.setOrganization(course.getOrganization()); // ✅ NECESARIO
 
             ClassSession saved = classService.create(newClass);
-            return ResponseEntity.ok(saved);
+
+            return ResponseEntity.ok(Map.of(
+                    "id", saved.getId(),
+                    "name", saved.getName(),
+                    "date", saved.getDate(),
+                    "courseName", course.getName()
+            ));
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("❌ " + e.getMessage());
+            e.printStackTrace(); // ✅ MOSTRAR ERROR EN CONSOLA
+            return ResponseEntity.internalServerError()
+                    .body("❌ Error inesperado: " + e.getMessage());
         }
     }
 
@@ -161,6 +174,17 @@ public class ClassController {
         Long courseId = body.get("courseId");
         ClassSession session = classService.getOrCreateTodaySession(courseId);
         return ResponseEntity.ok(session);
+    }
+    // ✅ Obtener usuario autenticado
+    private User getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new RuntimeException("⚠️ Usuario no autenticado");
+        }
+
+        String email = auth.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("❌ Usuario no encontrado en BD"));
     }
 
 }

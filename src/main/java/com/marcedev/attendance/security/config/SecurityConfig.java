@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 
                         // Cursos
-                        .requestMatchers(HttpMethod.POST, "/api/users/**/assign-courses").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users/*/assign-courses").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/courses/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "INSTRUCTOR", "USER")
                         .requestMatchers(HttpMethod.POST, "/api/courses/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "INSTRUCTOR")
                         .requestMatchers(HttpMethod.PUT, "/api/courses/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "INSTRUCTOR")
@@ -66,7 +66,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/classes/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "INSTRUCTOR")
 
                         // Asistencia
-                        .requestMatchers("/api/attendance/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "INSTRUCTOR")
+                        .requestMatchers(HttpMethod.POST, "/api/attendance/**").hasAnyRole("SUPER_ADMIN","ADMIN","INSTRUCTOR")
+                        .requestMatchers(HttpMethod.GET, "/api/attendance/**").hasAnyRole("SUPER_ADMIN","ADMIN","INSTRUCTOR")
 
                         // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
