@@ -3,6 +3,8 @@ package com.marcedev.attendance.dto;
 import com.marcedev.attendance.enums.Rol;
 import lombok.*;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,4 +18,6 @@ public class UserDTO {
     // 🔹 Nuevos campos para multi-organización
     private Long organizationId;
     private String organizationName;
+    private List<String> courses; // 👈 SOLO nombres
+
 }

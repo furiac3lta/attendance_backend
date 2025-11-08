@@ -40,12 +40,33 @@ public class UserController {
                         .body("🚫 No tiene permisos para listar usuarios.");
             }
 
-            List<User> users = userService.findAll();
-            users.forEach(u -> u.getCourses().forEach(c -> c.setInstructor(null)));
+            var users = userService.findAll()
+                    .stream()
+                    .map(u -> {
+                        UserDTO dto = new UserDTO();
+                        dto.setId(u.getId());
+                        dto.setFullName(u.getFullName());
+                        dto.setEmail(u.getEmail());
+                        dto.setRole(u.getRole().name());
+                        dto.setOrganizationId(u.getOrganization() != null ? u.getOrganization().getId() : null);
+                        dto.setOrganizationName(u.getOrganization() != null ? u.getOrganization().getName() : null);
+
+                        // ✅ Cursos ahora se devuelven como una lista de nombres
+                        dto.setCourses(
+                                u.getCourses() != null
+                                        ? u.getCourses().stream().map(c -> c.getName()).toList()
+                                        : List.of()
+                        );
+
+                        return dto;
+                    })
+                    .toList();
 
             return ResponseEntity.ok(users);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("❌ Error al obtener usuarios: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("❌ Error al obtener usuarios: " + e.getMessage());
         }
     }
 
@@ -152,23 +173,34 @@ public class UserController {
         }
     }
 
-    // 🔹 Asignar cursos (solo ADMIN o INSTRUCTOR)
+    // 🔹 Asignar cursos a un usuario (SUPER_ADMIN, ADMIN o INSTRUCTOR)
     @PostMapping("/{userId}/assign-courses")
     public ResponseEntity<?> assignCoursesToUser(
             @PathVariable Long userId,
-            @RequestBody List<Long> courseIds) {
+            @RequestBody List<Long> courseIds
+    ) {
         try {
-            Rol currentRole = getCurrentUserRole();
+            Rol currentRole = getCurrentUserRole(); // ✅ obtenemos el rol actual
 
-            if (currentRole != Rol.ADMIN && currentRole != Rol.INSTRUCTOR) {
+            // ✅ SUPER_ADMIN también puede asignar cursos ahora
+            if (currentRole != Rol.SUPER_ADMIN &&
+                    currentRole != Rol.ADMIN &&
+                    currentRole != Rol.INSTRUCTOR) {
                 return ResponseEntity.status(403)
-                        .body("🚫 Solo ADMIN o INSTRUCTOR pueden asignar cursos.");
+                        .body("🚫 Solo ADMIN, INSTRUCTOR o SUPER_ADMIN pueden asignar cursos.");
             }
 
+            // ✅ Ejecutamos la asignación
             User updatedUser = userService.assignCourses(userId, courseIds);
+
+            // ✅ Evitamos recursión JSON
+            updatedUser.getCourses().forEach(c -> c.setInstructor(null));
+
             return ResponseEntity.ok(updatedUser);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("❌ Error al asignar cursos: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("❌ Error al asignar cursos: " + e.getMessage());
         }
     }
 
@@ -258,6 +290,7 @@ public class UserController {
                     .body("❌ Error al promover usuario: " + e.getMessage());
         }
     }
+
     // 🔹 Degradar (rebajar) un usuario a un rol inferior (INSTRUCTOR o USER)
     @PutMapping("/{id}/demote")
     public ResponseEntity<?> demoteUser(
@@ -355,9 +388,10 @@ public class UserController {
     // 🧩 Helper para obtener el usuario autenticado actual
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+        if (auth == null) throw new RuntimeException("Usuario no autenticado");
+
+        return userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
     // 🔹 Obtener alumnos por curso (para tomar asistencia)
     // 🔹 Obtener alumnos por curso (para tomar asistencia)
@@ -398,5 +432,8 @@ public class UserController {
                     .body("❌ Error al obtener alumnos del curso: " + e.getMessage());
         }
     }
+
+
+
 
 }
