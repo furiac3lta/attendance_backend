@@ -177,4 +177,14 @@ public class CourseController {
         return userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
+
+    @PatchMapping("/{courseId}/assign-instructor/{instructorId}")
+    public ResponseEntity<?> assignInstructor(
+            @PathVariable Long courseId,
+            @PathVariable Long instructorId
+    ) {
+        courseService.assignInstructor(courseId, instructorId);
+        return ResponseEntity.ok("Instructor asignado");
+    }
+
 }

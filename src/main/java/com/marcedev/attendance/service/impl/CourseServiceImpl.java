@@ -168,4 +168,16 @@ public class CourseServiceImpl implements CourseService {
 
         return List.of();
     }
+
+    public void assignInstructor(Long courseId, Long instructorId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
+
+        User instructor = userRepository.findById(instructorId)
+                .orElseThrow(() -> new RuntimeException("Instructor no encontrado"));
+
+        course.setInstructor(instructor);
+        courseRepository.save(course);
+    }
+
 }
