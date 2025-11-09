@@ -4,6 +4,7 @@ import com.marcedev.attendance.entities.Course;
 import com.marcedev.attendance.entities.Organization;
 import com.marcedev.attendance.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,5 +21,13 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByOrganizationAndInstructor(Organization organization, User instructor);
 
     List<Course> findByOrganizationId(Long organizationId);
+
+    @Query("""
+    SELECT u
+    FROM Course c
+    JOIN c.students u
+    WHERE c.id = :courseId
+""")
+    List<User> findStudentsByCourseId(Long courseId);
 
 }

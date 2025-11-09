@@ -2,6 +2,7 @@ package com.marcedev.attendance.service.impl;
 
 import com.marcedev.attendance.dto.AttendanceDTO;
 import com.marcedev.attendance.dto.AttendanceMarkDTO;
+import com.marcedev.attendance.dto.CourseMonthlyAttendanceDTO;
 import com.marcedev.attendance.dto.StudentMonthlyStatDTO;
 import com.marcedev.attendance.entities.*;
 import com.marcedev.attendance.enums.Rol;
@@ -215,9 +216,11 @@ public class AttendanceServiceImpl implements AttendanceService {
                 });
     }
 
+
     @Override
-    public List<StudentMonthlyStatDTO> getCourseMonthlyStats(Long courseId, int month, int year) {
-        return attendanceRepository.getMonthlyStats(courseId, month, year);
+    public List<CourseMonthlyAttendanceDTO> getCourseMonthlyStats(Long courseId, int month, int year) {
+        Long totalClasses = attendanceRepository.countClassesInMonth(courseId, month, year);
+        return attendanceRepository.getMonthlyCourseStats(courseId, month, year, totalClasses);
     }
 
 }

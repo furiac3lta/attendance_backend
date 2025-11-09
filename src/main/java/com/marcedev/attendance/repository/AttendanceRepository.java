@@ -1,5 +1,6 @@
 package com.marcedev.attendance.repository;
 
+import com.marcedev.attendance.dto.CourseMonthlyAttendanceDTO;
 import com.marcedev.attendance.dto.StudentMonthlyStatDTO;
 import com.marcedev.attendance.entities.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -50,5 +51,48 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     ORDER BY a.student.fullName ASC
 """)
     List<StudentMonthlyStatDTO> getMonthlyStats(Long courseId, int month, int year);
+
+   ///
+   @Query("""
+    SELECT new com.marcedev.attendance.dto.CourseMonthlyAttendanceDTO(
+        s.id,
+        s.fullName,
+        COALESCE(SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END), 0),
+        :totalClasses,
+        CASE WHEN :totalClasses = 0 THEN 0.0
+             ELSE (COALESCE(SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END), 0) * 100.0 / :totalClasses)
+        END
+    )
+    FROM User s
+    LEFT JOIN Attendance a ON a.student.id = s.id AND a.course.id = :courseId
+         AND MONTH(a.classSession.date) = :month
+         AND YEAR(a.classSession.date) = :year
+    JOIN s.courses c
+    WHERE c.id = :courseId
+    GROUP BY s.id, s.fullName
+    ORDER BY s.fullName
+""")
+   List<CourseMonthlyAttendanceDTO> getMonthlyCourseStats(
+           Long courseId,
+           int month,
+           int year,
+           Long totalClasses
+   );
+
+    ///
+    @Query("SELECT COUNT(DISTINCT a.classSession.id) FROM Attendance a " +
+            "WHERE a.course.id = :courseId " +
+            "AND MONTH(a.classSession.date) = :month " +
+            "AND YEAR(a.classSession.date) = :year")
+    long countClassesInMonth(Long courseId, int month, int year);
+
+    @Query("SELECT COUNT(a) FROM Attendance a " +
+            "WHERE a.student.id = :studentId " +
+            "AND a.course.id = :courseId " +
+            "AND a.attended = true " +
+            "AND MONTH(a.classSession.date) = :month " +
+            "AND YEAR(a.classSession.date) = :year")
+    long countAttendances(Long studentId, Long courseId, int month, int year);
+
 
 }

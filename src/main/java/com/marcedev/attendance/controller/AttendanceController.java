@@ -123,4 +123,13 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getCourseMonthlyStats(courseId, month, year));
     }
 
+    @GetMapping("/course/{courseId}/report")
+    public ResponseEntity<?> getCourseReport(
+            @PathVariable Long courseId,
+            @RequestParam int month,
+            @RequestParam int year
+    ) {
+        return ResponseEntity.ok(attendanceService.getCourseMonthlyStats(courseId, month, year));
+    }
+
 }
