@@ -1,5 +1,6 @@
 package com.marcedev.attendance.repository;
 
+import com.marcedev.attendance.dto.StudentMonthlyStatDTO;
 import com.marcedev.attendance.entities.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -32,5 +33,22 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findByOrganizationId(@Param("orgId") Long orgId);
     void deleteByClassSessionId(Long classSessionId);
 
+    @Query("""
+    SELECT new com.marcedev.attendance.dto.StudentMonthlyStatDTO(
+        a.student.id,
+        a.student.fullName,
+        SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END),
+        SUM(CASE WHEN a.attended = false THEN 1 ELSE 0 END),
+        COUNT(a),
+        (SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END) * 100.0 / COUNT(a))
+    )
+    FROM Attendance a
+    WHERE a.course.id = :courseId
+      AND MONTH(a.classSession.date) = :month
+      AND YEAR(a.classSession.date) = :year
+    GROUP BY a.student.id, a.student.fullName
+    ORDER BY a.student.fullName ASC
+""")
+    List<StudentMonthlyStatDTO> getMonthlyStats(Long courseId, int month, int year);
 
 }

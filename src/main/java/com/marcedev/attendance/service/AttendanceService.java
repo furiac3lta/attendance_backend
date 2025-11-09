@@ -2,13 +2,16 @@ package com.marcedev.attendance.service;
 
 import com.marcedev.attendance.dto.AttendanceDTO;
 import com.marcedev.attendance.dto.AttendanceMarkDTO;
+import com.marcedev.attendance.dto.StudentMonthlyStatDTO;
 import com.marcedev.attendance.entities.ClassSession;
+import com.marcedev.attendance.repository.AttendanceRepository;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public interface AttendanceService {
+
 
     AttendanceDTO save(AttendanceDTO dto);
 
@@ -30,4 +33,8 @@ public interface AttendanceService {
 
 
     ClassSession getOrCreateTodaySession(Long courseId);
+
+    List<StudentMonthlyStatDTO> getCourseMonthlyStats(Long courseId, int month, int year);
+
+
 }
