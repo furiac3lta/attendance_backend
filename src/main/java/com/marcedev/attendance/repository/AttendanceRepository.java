@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio de asistencias.
@@ -58,16 +59,32 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
         s.id,
         s.fullName,
         COALESCE(SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END), 0),
-        :totalClasses,
-        CASE WHEN :totalClasses = 0 THEN 0.0
-             ELSE (COALESCE(SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END), 0) * 100.0 / :totalClasses)
+        (SELECT COUNT(DISTINCT cs.id)
+         FROM ClassSession cs
+         WHERE cs.course.id = :courseId
+         AND MONTH(cs.date) = :month
+         AND YEAR(cs.date) = :year),
+        CASE 
+            WHEN (SELECT COUNT(DISTINCT cs.id)
+                  FROM ClassSession cs
+                  WHERE cs.course.id = :courseId
+                  AND MONTH(cs.date) = :month
+                  AND YEAR(cs.date) = :year) = 0 
+            THEN 0.0
+            ELSE (COALESCE(SUM(CASE WHEN a.attended = true THEN 1 ELSE 0 END), 0) * 100.0 /
+                  (SELECT COUNT(DISTINCT cs.id)
+                   FROM ClassSession cs
+                   WHERE cs.course.id = :courseId
+                   AND MONTH(cs.date) = :month
+                   AND YEAR(cs.date) = :year))
         END
     )
     FROM User s
-    LEFT JOIN Attendance a ON a.student.id = s.id AND a.course.id = :courseId
-         AND MONTH(a.classSession.date) = :month
-         AND YEAR(a.classSession.date) = :year
     JOIN s.courses c
+    LEFT JOIN Attendance a ON a.student.id = s.id
+        AND a.course.id = :courseId
+        AND MONTH(a.classSession.date) = :month
+        AND YEAR(a.classSession.date) = :year
     WHERE c.id = :courseId
     GROUP BY s.id, s.fullName
     ORDER BY s.fullName
@@ -75,9 +92,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
    List<CourseMonthlyAttendanceDTO> getMonthlyCourseStats(
            Long courseId,
            int month,
-           int year,
-           Long totalClasses
+           int year
    );
+
 
     ///
     @Query("SELECT COUNT(DISTINCT a.classSession.id) FROM Attendance a " +
@@ -93,6 +110,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             "AND MONTH(a.classSession.date) = :month " +
             "AND YEAR(a.classSession.date) = :year")
     long countAttendances(Long studentId, Long courseId, int month, int year);
+
+    Optional<Attendance> findByStudentIdAndClassSessionId(Long studentId, Long classSessionId);
 
 
 }

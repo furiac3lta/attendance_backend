@@ -29,5 +29,6 @@ public class AttendanceDTO {
     private Long organizationId;
     private String organizationName;
 
+    private Long classSessionId; // <--- ESTE ES EL QUE FALTABA
 
 }

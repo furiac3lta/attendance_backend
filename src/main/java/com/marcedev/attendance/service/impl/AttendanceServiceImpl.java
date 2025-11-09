@@ -37,9 +37,43 @@ public class AttendanceServiceImpl implements AttendanceService {
     // ================== CRUD ==================
 
     @Override
+    @Transactional
     public AttendanceDTO save(AttendanceDTO dto) {
-        Attendance entity = attendanceMapper.toEntity(dto);
-        Attendance saved = attendanceRepository.save(entity);
+
+        if (dto.getClassSessionId() == null || dto.getStudentId() == null) {
+            throw new RuntimeException("classSessionId y studentId son obligatorios");
+        }
+
+        // Buscar si ya existe asistencia registrada para esta clase y alumno
+        var existingOpt = attendanceRepository.findByStudentIdAndClassSessionId(
+                dto.getStudentId(),
+                dto.getClassSessionId()
+        );
+
+        Attendance entity;
+
+        if (existingOpt.isPresent()) {
+            // ✅ Ya existe → actualizar estado
+            entity = existingOpt.get();
+            entity.setAttended(dto.isAttended());
+        } else {
+            // ✅ No existe → crear nueva
+            entity = attendanceMapper.toEntity(dto);
+
+            // Aseguramos referencias clave
+            var session = classSessionRepository.findById(dto.getClassSessionId())
+                    .orElseThrow(() -> new RuntimeException("Sesión no encontrada"));
+
+            var student = userRepository.findById(dto.getStudentId())
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
+
+            entity.setClassSession(session);
+            entity.setStudent(student);
+            entity.setCourse(session.getCourse());
+            entity.setOrganization(session.getOrganization());
+        }
+
+        var saved = attendanceRepository.save(entity);
         return attendanceMapper.toDTO(saved);
     }
 
@@ -164,28 +198,36 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .orElseThrow(() -> new RuntimeException("Sesión no encontrada"));
 
         Course course = session.getCourse();
-        if (course == null) {
-            throw new RuntimeException("La sesión no tiene curso asociado.");
+        Organization org = session.getOrganization() != null ? session.getOrganization() : course.getOrganization();
+
+        // ✅ Traemos asistencias ya creadas (si existen)
+        List<Attendance> existing = attendanceRepository.findByClassSessionId(sessionId);
+
+        if (!existing.isEmpty()) {
+            // ✅ EDITAR (UPDATE)
+            for (AttendanceMarkDTO mark : attendances) {
+                existing.stream()
+                        .filter(a -> a.getStudent().getId().equals(mark.getUserId()))
+                        .findFirst()
+                        .ifPresent(a -> a.setAttended(mark.isPresent())); // solo actualiza presente/ausente
+            }
+
+            attendanceRepository.saveAll(existing);
+            return;
         }
 
-        Organization org = session.getOrganization();
-        if (org == null) {
-            org = course.getOrganization(); // fallback por seguridad
-        }
-
+        // ✅ CREAR si no existían
         for (AttendanceMarkDTO mark : attendances) {
-
             User student = userRepository.findById(mark.getUserId())
-                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado ID: " + mark.getUserId()));
+                    .orElseThrow(() -> new RuntimeException("Alumno no encontrado"));
 
-            Attendance attendance = new Attendance();
-            attendance.setClassSession(session);   // FK ✅
-            attendance.setStudent(student);        // FK ✅
-            attendance.setAttended(mark.isPresent());
-            attendance.setCourse(course);          // ✅ ESTA ES LA CLAVE
-            attendance.setOrganization(org);       // ✅ CORRECTO
-
-            attendanceRepository.save(attendance);
+            Attendance a = new Attendance();
+            a.setClassSession(session);
+            a.setStudent(student);
+            a.setAttended(mark.isPresent());
+            a.setCourse(course);
+            a.setOrganization(org);
+            attendanceRepository.save(a);
         }
     }
 
@@ -220,7 +262,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Override
     public List<CourseMonthlyAttendanceDTO> getCourseMonthlyStats(Long courseId, int month, int year) {
         Long totalClasses = attendanceRepository.countClassesInMonth(courseId, month, year);
-        return attendanceRepository.getMonthlyCourseStats(courseId, month, year, totalClasses);
+        return attendanceRepository.getMonthlyCourseStats(courseId, month, year);
     }
 
 }
