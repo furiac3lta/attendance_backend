@@ -28,4 +28,7 @@ public class ClassDetailsDTO {
 
     /** Nombre del curso asociado */
     private String courseName;
+
+    /** ✅ ID del curso */
+    private Long courseId;
 }

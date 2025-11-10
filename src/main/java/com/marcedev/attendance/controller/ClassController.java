@@ -7,6 +7,7 @@ import com.marcedev.attendance.entities.ClassSession;
 import com.marcedev.attendance.entities.Course;
 import com.marcedev.attendance.entities.User;
 import com.marcedev.attendance.enums.Rol;
+import com.marcedev.attendance.repository.ClassSessionRepository;
 import com.marcedev.attendance.repository.CourseRepository;
 import com.marcedev.attendance.repository.UserRepository;
 import com.marcedev.attendance.service.AttendanceService;
@@ -31,7 +32,7 @@ public class ClassController {
     private final AttendanceService attendanceService;
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
-
+    private final ClassSessionRepository classSessionRepository;
 
     // ✅ Obtener o crear la clase del día (para tomar asistencia)
     @GetMapping("/today/{courseId}")
@@ -45,14 +46,11 @@ public class ClassController {
         return ResponseEntity.ok(classService.findByCourseId(courseId));
     }
 
-    // ✅ Detalles de la clase
     @GetMapping("/{id}/details")
-    public ResponseEntity<?> getClassDetails(@PathVariable Long id) {
-        ClassDetailsDTO details = classService.getClassDetails(id);
-        return details == null
-                ? ResponseEntity.status(404).body("❌ Clase no encontrada")
-                : ResponseEntity.ok(details);
+    public ClassDetailsDTO getClassDetails(@PathVariable Long id) {
+        return classService.getClassDetails(id);
     }
+
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ClassCreateDTO dto) {

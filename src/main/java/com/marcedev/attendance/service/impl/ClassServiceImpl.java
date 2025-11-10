@@ -106,10 +106,13 @@ public class ClassServiceImpl implements ClassService {
 
         return new ClassDetailsDTO(
                 classSession.getId(),
-                classSession.getName(),
+                classSession.getName(), // esto va en className
                 classSession.getDate(),
-                courseName
+                courseName,
+                course.getId()
         );
+
+
     }
 
     @Override
