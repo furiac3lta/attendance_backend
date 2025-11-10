@@ -28,40 +28,52 @@ public class UserController {
     @GetMapping
     public ResponseEntity<?> getAll() {
         try {
-            Rol role = getCurrentUserRole();
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            User currentUser = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado"));
 
-            if (role != Rol.SUPER_ADMIN && role != Rol.ADMIN) {
-                return ResponseEntity.status(403).body("🚫 No autorizado.");
+            List<User> users;
+
+            // SUPER_ADMIN → ve todos
+            if (currentUser.getRole() == Rol.SUPER_ADMIN) {
+                users = userService.findAll();
+            }
+            // ADMIN → solo los de su organización
+            else if (currentUser.getRole() == Rol.ADMIN) {
+                if (currentUser.getOrganization() == null) {
+                    return ResponseEntity.badRequest()
+                            .body("⚠️ Este admin no tiene organización asignada.");
+                }
+                Long orgId = currentUser.getOrganization().getId();
+                users = userRepository.findByOrganizationId(orgId);
+            }
+            else {
+                return ResponseEntity.status(403)
+                        .body("🚫 No tiene permisos para listar usuarios.");
             }
 
-            var users = userService.findAll()
-                    .stream()
-                    .map(u -> {
-                        UserDTO dto = new UserDTO();
-                        dto.setId(u.getId());
-                        dto.setFullName(u.getFullName());
-                        dto.setEmail(u.getEmail());
-                        dto.setRole(u.getRole().name());
+            // Convertimos a DTO para front
+            var result = users.stream().map(u -> {
+                var dto = new UserDTO();
+                dto.setId(u.getId());
+                dto.setFullName(u.getFullName());
+                dto.setEmail(u.getEmail());
+                dto.setRole(u.getRole().name());
+                dto.setOrganizationName(u.getOrganization() != null ? u.getOrganization().getName() : null);
+                dto.setCourses(
+                        u.getCourses() != null
+                                ? u.getCourses().stream().map(c -> c.getName()).toList()
+                                : List.of()
+                );
+                return dto;
+            }).toList();
 
-                        if (u.getOrganization() != null) {
-                            dto.setOrganizationId(u.getOrganization().getId());
-                            dto.setOrganizationName(u.getOrganization().getName());
-                        }
-
-                        dto.setCourses(
-                                u.getCourses() != null
-                                        ? u.getCourses().stream().map(c -> c.getName()).toList()
-                                        : List.of()
-                        );
-
-                        return dto;
-                    })
-                    .toList();
-
-            return ResponseEntity.ok(users);
+            return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("❌ Error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("❌ Error al obtener usuarios: " + e.getMessage());
         }
     }
 
@@ -113,20 +125,36 @@ public class UserController {
         return userService.findByEmail(email).orElseThrow().getRole();
     }
     @GetMapping("/role/{role}")
-    public ResponseEntity<?> getByRole(@PathVariable Rol role) {
-        var users = userRepository.findByRole(role)
-                .stream()
-                .map(u -> {
-                    var dto = new UserDTO();
-                    dto.setId(u.getId());
-                    dto.setFullName(u.getFullName());
-                    dto.setEmail(u.getEmail());
-                    dto.setRole(u.getRole().name());
-                    dto.setOrganizationId(u.getOrganization() != null ? u.getOrganization().getId() : null);
-                    dto.setOrganizationName(u.getOrganization() != null ? u.getOrganization().getName() : null);
-                    return dto;
-                })
-                .toList();
+    public ResponseEntity<?> getUsersByRole(@PathVariable Rol role) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado"));
+
+        List<User> users;
+
+        if (currentUser.getRole() == Rol.SUPER_ADMIN) {
+            // Superadmin ve todos
+            users = userRepository.findByRole(role);
+        } else if (currentUser.getRole() == Rol.ADMIN) {
+            // Admin solo ve instructores de su organización
+            if (currentUser.getOrganization() == null) {
+                return ResponseEntity.badRequest()
+                        .body("⚠️ Este admin no tiene organización asignada.");
+            }
+            users = userRepository.findByRoleAndOrganizationId(role, currentUser.getOrganization().getId());
+        } else {
+            return ResponseEntity.status(403)
+                    .body("🚫 No tienes permisos para ver instructores.");
+        }
+
+        // Evitar referencias innecesarias en JSON
+        users.forEach(u -> {
+            if (u.getCourses() != null) {
+                u.getCourses().forEach(c -> c.setInstructor(null));
+            }
+        });
 
         return ResponseEntity.ok(users);
     }

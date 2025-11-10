@@ -17,10 +17,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @EntityGraph(attributePaths = {"courses"})
     Optional<User> findById(Long id); // ✅ También para findById
+
     boolean existsByEmail(String email);
+
     List<User> findByRole(Rol role);
+
     List<User> findByOrganizationId(Long orgId);
+
     Optional<User> findByEmail(String email);
+
     @Query("SELECT DISTINCT u FROM User u JOIN u.courses c WHERE c.id IN :courseIds")
     List<User> findDistinctByCoursesIdIn(@Param("courseIds") List<Long> courseIds);
+
+    List<User> findByRoleAndOrganizationId(Rol role, Long organizationId);
+
 }
