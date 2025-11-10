@@ -1,10 +1,13 @@
+// src/main/java/com/marcedev/attendance/repository/UserRepository.java
 package com.marcedev.attendance.repository;
 
 import com.marcedev.attendance.entities.User;
 import com.marcedev.attendance.enums.Rol;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -13,10 +16,13 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     @EntityGraph(attributePaths = {"courses"})
-    List<User> findAll(); // ✅ Carga los cursos junto con los usuarios
+    Page<User> findAll(Pageable pageable);
 
     @EntityGraph(attributePaths = {"courses"})
-    Optional<User> findById(Long id); // ✅ También para findById
+    Page<User> findByOrganizationId(Long organizationId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"courses"})
+    Optional<User> findById(Long id);
 
     boolean existsByEmail(String email);
 
@@ -30,5 +36,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findDistinctByCoursesIdIn(@Param("courseIds") List<Long> courseIds);
 
     List<User> findByRoleAndOrganizationId(Rol role, Long organizationId);
-
 }

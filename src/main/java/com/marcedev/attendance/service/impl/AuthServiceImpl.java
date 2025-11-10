@@ -18,6 +18,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -28,10 +30,11 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
 
     // ======================================================
-    // 🔹 REGISTRO DE USUARIO
+    // 🔹 REGISTRO
     // ======================================================
     @Override
     public AuthResponse register(RegisterRequest request) {
+
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("El email ya está registrado");
         }
@@ -44,25 +47,24 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = User.builder()
-                .fullName(request.getFullName() != null ? request.getFullName() : request.getEmail())
+                .fullName(request.getFullName())
                 .email(request.getEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(role)
                 .build();
 
-        // 🔹 Asignar organización si el creador pertenece a una
+        // Si quien crea tiene organización → asignar organización
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            String currentEmail = auth.getName();
-            userRepository.findByEmail(currentEmail).ifPresent(currentUser -> {
-                Organization org = currentUser.getOrganization();
-                if (org != null) user.setOrganization(org);
+            userRepository.findByEmail(auth.getName()).ifPresent(current -> {
+                if (current.getOrganization() != null)
+                    user.setOrganization(current.getOrganization());
             });
         }
 
         userRepository.save(user);
 
-        // 🔹 Generar token JWT
+        // ✅ Generar token de forma correcta (UserDetails)
         String token = jwtService.generateToken(
                 org.springframework.security.core.userdetails.User.builder()
                         .username(user.getEmail())
@@ -71,15 +73,15 @@ public class AuthServiceImpl implements AuthService {
                         .build()
         );
 
-        // 🔹 Convertir entidad a DTO
-        UserDTO dto = UserDTO.builder()
-                .id(user.getId())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
-                .organizationName(user.getOrganization() != null ? user.getOrganization().getName() : null)
-                .build();
+        UserDTO dto = new UserDTO(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getOrganization() != null ? user.getOrganization().getName() : null,
+                user.getCourses() != null ? user.getCourses().stream().map(c -> c.getName()).toList() : List.of(),
+                user.getOrganization() != null ? user.getOrganization().getId() : null
+        );
 
         return AuthResponse.builder()
                 .token(token)
@@ -93,6 +95,7 @@ public class AuthServiceImpl implements AuthService {
     // ======================================================
     @Override
     public AuthResponse login(AuthRequest request) {
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail().toLowerCase(),
@@ -103,10 +106,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail().toLowerCase())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (user.getRole() == Rol.USER) {
-            throw new RuntimeException("Acceso denegado: los usuarios con rol USER no pueden iniciar sesión.");
-        }
-
+        // ✅ Generar token de forma correcta
         String token = jwtService.generateToken(
                 org.springframework.security.core.userdetails.User.builder()
                         .username(user.getEmail())
@@ -115,15 +115,15 @@ public class AuthServiceImpl implements AuthService {
                         .build()
         );
 
-        // 🔹 Convertir entidad a DTO (sin loops)
-        UserDTO dto = UserDTO.builder()
-                .id(user.getId())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .organizationId(user.getOrganization() != null ? user.getOrganization().getId() : null)
-                .organizationName(user.getOrganization() != null ? user.getOrganization().getName() : null)
-                .build();
+        UserDTO dto = new UserDTO(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getOrganization() != null ? user.getOrganization().getName() : null,
+                user.getCourses() != null ? user.getCourses().stream().map(c -> c.getName()).toList() : List.of(),
+                user.getOrganization() != null ? user.getOrganization().getId() : null
+        );
 
         return AuthResponse.builder()
                 .token(token)

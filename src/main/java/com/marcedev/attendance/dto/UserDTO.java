@@ -1,23 +1,22 @@
 package com.marcedev.attendance.dto;
 
-import com.marcedev.attendance.enums.Rol;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class UserDTO {
     private Long id;
     private String fullName;
     private String email;
     private String role;
 
-    // 🔹 Nuevos campos para multi-organización
-    private Long organizationId;
-    private String organizationName;
-    private List<String> courses; // 👈 SOLO nombres
+    private String organizationName; // Ej: "Irmãos Club Puerto Rico"
+    private List<String> courses; // Ej: ["BJJ Kids", "BJJ Adultos"]
 
+    private Long organizationId; // Para formularios (opcional)
 }
