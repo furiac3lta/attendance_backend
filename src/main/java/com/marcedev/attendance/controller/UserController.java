@@ -112,4 +112,23 @@ public class UserController {
         String email = getAuthenticatedEmail();
         return userService.findByEmail(email).orElseThrow().getRole();
     }
+    @GetMapping("/role/{role}")
+    public ResponseEntity<?> getByRole(@PathVariable Rol role) {
+        var users = userRepository.findByRole(role)
+                .stream()
+                .map(u -> {
+                    var dto = new UserDTO();
+                    dto.setId(u.getId());
+                    dto.setFullName(u.getFullName());
+                    dto.setEmail(u.getEmail());
+                    dto.setRole(u.getRole().name());
+                    dto.setOrganizationId(u.getOrganization() != null ? u.getOrganization().getId() : null);
+                    dto.setOrganizationName(u.getOrganization() != null ? u.getOrganization().getName() : null);
+                    return dto;
+                })
+                .toList();
+
+        return ResponseEntity.ok(users);
+    }
+
 }
