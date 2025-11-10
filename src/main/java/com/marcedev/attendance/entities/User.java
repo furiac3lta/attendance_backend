@@ -23,7 +23,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"password", "organization", "courses", "hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id
@@ -48,29 +48,25 @@ public class User {
     @Column(nullable = false)
     private Rol role;
 
-    /** Cursos a los que pertenece el usuario (como alumno o instructor) */
-    @ManyToMany(fetch = FetchType.LAZY)
+    /** Cursos a los que pertenece el usuario */
+    @ManyToMany(fetch = FetchType.EAGER) // ✅ Ahora Angular recibe los cursos
     @JoinTable(
             name = "user_courses",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "course_id")
     )
-    @JsonIgnoreProperties({
-            "students", "instructor", "organization"
-    })
+    @JsonIgnoreProperties({"students", "instructor", "organization", "classes"})
     private Set<Course> courses = new HashSet<>();
 
-    /** Asistencias del alumno (solo aplica para usuarios con rol USER) */
+    /** Asistencias del alumno */
     @OneToMany(mappedBy = "student", cascade = CascadeType.REMOVE, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Attendance> attendances;
 
     /** Organización a la que pertenece el usuario */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER) // ✅ AHORA SE ENVÍA AL FRONT
     @JoinColumn(name = "organization_id")
-    @JsonIgnoreProperties({
-            "users", "courses", "admin"
-    })
+    @JsonIgnoreProperties({"users", "courses", "admin", "classes"})
     private Organization organization;
 
     @Override
