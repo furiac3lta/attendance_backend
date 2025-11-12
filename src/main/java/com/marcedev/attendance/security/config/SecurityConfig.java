@@ -109,9 +109,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+
+        // 🔥 Permite cualquier origen (Netlify, Vercel, etc.)
+        configuration.addAllowedOriginPattern("*");
+
+        // Permite cualquier método
+        configuration.addAllowedMethod("*");
+
+        // Permite cualquier header
+        configuration.addAllowedHeader("*");
+
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
