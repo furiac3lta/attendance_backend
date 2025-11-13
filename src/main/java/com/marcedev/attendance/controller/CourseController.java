@@ -22,7 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+
 public class CourseController {
 
     private final CourseService courseService;

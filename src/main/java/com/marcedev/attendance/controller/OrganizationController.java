@@ -19,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/organizations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+
 public class OrganizationController {
 
     private final OrganizationService organizationService;

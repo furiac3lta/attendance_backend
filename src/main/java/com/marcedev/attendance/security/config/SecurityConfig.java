@@ -30,7 +30,7 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customEntryPoint;
 
     // ======================================================
-    // 🔥 CONFIGURACIÓN DE CORS — Railway + Netlify + Localhost
+    // 🔥 C O R S — Netlify + Localhost + Railway
     // ======================================================
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -39,8 +39,8 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
 
         config.setAllowedOrigins(List.of(
-                "https://gleaming-dodol-e386b2.netlify.app", // 🔥 tu frontend en producción
-                "http://localhost:4200"                     // 🔥 tu frontend local
+                "https://gleaming-dodol-e386b2.netlify.app",  // Frontend Netlify
+                "http://localhost:4200"                       // Angular local
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -54,33 +54,38 @@ public class SecurityConfig {
     }
 
     // ======================================================
-    // 🔥 CADENA DE SEGURIDAD PRINCIPAL
+    // 🔥 S E C U R I T Y   F I L T E R   C H A I N
     // ======================================================
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customEntryPoint))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 Endpoints públicos
+                        // Endpoints públicos (login, register, refresh)
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // Preflight OPTIONS debe estar siempre permitido
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🔐 Resto requiere autenticación
+                        // Todos los demás requieren autenticación
                         .anyRequest().authenticated()
                 )
 
-                // ⬇️ Filtro JWT antes del login por username + password
+                // Filtro JWT antes del UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     // ======================================================
-    // 🔐 Password encoder
+    // 🔐 PASSWORD ENCODER
     // ======================================================
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -88,12 +93,11 @@ public class SecurityConfig {
     }
 
     // ======================================================
-    // 🧠 Authentication manager
+    // 🧠 AUTH MANAGER
     // ======================================================
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
         return config.getAuthenticationManager();
     }
 }
