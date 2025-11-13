@@ -34,18 +34,20 @@ public class SecurityConfig {
         this.customEntryPoint = customEntryPoint;
     }
 
+    // 🔥 FILTER CHAIN COMPLETO
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
+
+        http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Rutas públicas
+
+                        // Public
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Organizaciones (solo SUPER_ADMIN)
+                        // Organizaciones
                         .requestMatchers("/api/organizations/**").hasRole("SUPER_ADMIN")
 
                         // Usuarios
@@ -69,20 +71,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/attendance/**").hasAnyRole("SUPER_ADMIN","ADMIN","INSTRUCTOR")
                         .requestMatchers(HttpMethod.GET, "/api/attendance/**").hasAnyRole("SUPER_ADMIN","ADMIN","INSTRUCTOR")
 
-                        // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
 
-                // 🔥 Asegurar que el filtro JWT se aplique correctamente
+                // JWT FILTER
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .securityContext(context -> context.requireExplicitSave(false));
 
         http.setSharedObject(HttpFirewall.class, relaxedHttpFirewall());
-
         return http.build();
     }
 
-    // 🔧 Firewall relajado
+    // 🔧 FIREWALL
     @Bean
     public HttpFirewall relaxedHttpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
@@ -106,25 +106,24 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+    // 🔥 CORS SOLO PARA LOCALHOST Y NETLIFY
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🔥 Permite cualquier origen (Netlify, Vercel, etc.)
-        configuration.addAllowedOriginPattern("*");
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:4200",
+                "https://gleaming-dodol-e386b2.netlify.app"
+        ));
 
-        // Permite cualquier método
-        configuration.addAllowedMethod("*");
-
-        // Permite cualquier header
-        configuration.addAllowedHeader("*");
-
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
-
 }
