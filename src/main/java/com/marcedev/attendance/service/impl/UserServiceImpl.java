@@ -1,5 +1,6 @@
 package com.marcedev.attendance.service.impl;
 
+import com.marcedev.attendance.dto.UserDTO;
 import com.marcedev.attendance.entities.Course;
 import com.marcedev.attendance.entities.Organization;
 import com.marcedev.attendance.entities.User;
@@ -180,6 +181,38 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         return userRepository.save(admin);
+    }
+    @Override
+    public UserDTO updateUser(Long id, UserDTO dto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // 🔥 Actualizamos solo los campos editables
+        user.setFullName(dto.getFullName());
+        user.setEmail(dto.getEmail());
+        user.setRole(Rol.valueOf(dto.getRole()));
+
+        if (dto.getOrganizationId() != null) {
+            user.setOrganization(
+                    organizationRepository.findById(dto.getOrganizationId())
+                            .orElseThrow(() -> new RuntimeException("Organización no encontrada"))
+            );
+        }
+
+
+        // Guardamos cambios
+        User saved = userRepository.save(user);
+
+        // Devolvemos DTO actualizado
+        return new UserDTO(
+                saved.getId(),
+                saved.getFullName(),
+                saved.getEmail(),
+                saved.getRole().name(),
+                saved.getOrganization() != null ? saved.getOrganization().getName() : null,
+                saved.getCourses() != null ? saved.getCourses().stream().map(c -> c.getName()).toList() : List.of(),
+                saved.getOrganization() != null ? saved.getOrganization().getId() : null
+        );
     }
 
 }

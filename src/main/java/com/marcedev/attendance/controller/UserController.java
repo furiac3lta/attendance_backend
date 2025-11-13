@@ -28,7 +28,9 @@ public class UserController {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
 
-    // ✅ Listar usuarios paginados (según rol)
+    // ==========================================================
+    // ✅ LISTAR USUARIOS (PAGINADO)
+    // ==========================================================
     @GetMapping
     public ResponseEntity<Page<UserDTO>> getAll(
             @PageableDefault(size = 10) Pageable pageable
@@ -64,7 +66,9 @@ public class UserController {
         return ResponseEntity.ok(dtoPage);
     }
 
-    // ✅ Crear
+    // ==========================================================
+    // ✅ CREAR USUARIO
+    // ==========================================================
     @PostMapping("/create")
     public ResponseEntity<?> create(@RequestBody User user) {
         Rol currentRole = getCurrentUserRole();
@@ -80,7 +84,21 @@ public class UserController {
         return ResponseEntity.ok(userService.save(user));
     }
 
-    // ✅ Asignar cursos
+    // ==========================================================
+    // ✅ EDITAR USUARIO (NUEVO – NECESARIO PARA NETLIFY)
+    // ==========================================================
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDTO> updateUser(
+            @PathVariable Long id,
+            @RequestBody UserDTO userDTO
+    ) {
+        UserDTO updated = userService.updateUser(id, userDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ==========================================================
+    // ✅ ASIGNAR CURSOS
+    // ==========================================================
     @PostMapping("/{userId}/assign-courses")
     public ResponseEntity<?> assignCourses(@PathVariable Long userId, @RequestBody List<Long> courseIds) {
         Rol role = getCurrentUserRole();
@@ -90,7 +108,9 @@ public class UserController {
         return ResponseEntity.ok(userService.assignCourses(userId, courseIds));
     }
 
-    // ✅ Listar por rol (para cargar instructores, etc.)
+    // ==========================================================
+    // ✅ LISTAR POR ROL
+    // ==========================================================
     @GetMapping("/role/{role}")
     public ResponseEntity<?> getUsersByRole(@PathVariable Rol role) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -119,6 +139,9 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    // ==========================================================
+    // 🔧 HELPERS INTERNOS
+    // ==========================================================
     private String getAuthenticatedEmail() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }

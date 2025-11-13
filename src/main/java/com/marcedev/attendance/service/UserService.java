@@ -1,5 +1,6 @@
 package com.marcedev.attendance.service;
 
+import com.marcedev.attendance.dto.UserDTO;
 import com.marcedev.attendance.entities.User;
 import java.util.List;
 import java.util.Optional;
@@ -18,5 +19,6 @@ public interface UserService {
     User assignCourses(Long userId, List<Long> courseIds); // Asignar cursos a un usuario (devuelve el usuario actualizado)
     void updateUser(Long id, User updatedUser);      // Actualizar datos del usuario
     User createAdminForOrganization(Long organizationId, User newAdminData);
+    UserDTO updateUser(Long id, UserDTO dto);
 
 }
