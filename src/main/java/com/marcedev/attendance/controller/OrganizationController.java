@@ -19,7 +19,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/organizations")
 @RequiredArgsConstructor
-
 public class OrganizationController {
 
     private final OrganizationService organizationService;
